@@ -1,17 +1,18 @@
-import pytest
-from unittest.mock import Mock, patch
-import sys
 import os
+import sys
+from unittest.mock import Mock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from search_tools import CourseSearchTool, ToolManager
 from vector_store import SearchResults
 
-
 # ============================================================================
 # CourseSearchTool Tests
 # ============================================================================
+
 
 class TestCourseSearchTool:
     """Test suite for CourseSearchTool"""
@@ -45,9 +46,7 @@ class TestCourseSearchTool:
 
         # Verify
         mock_vector_store.search.assert_called_once_with(
-            query="What is MCP?",
-            course_name=None,
-            lesson_number=None
+            query="What is MCP?", course_name=None, lesson_number=None
         )
 
         assert isinstance(result, str)
@@ -63,9 +62,7 @@ class TestCourseSearchTool:
         result = tool.execute(query="What is MCP?", course_name="MCP")
 
         mock_vector_store.search.assert_called_once_with(
-            query="What is MCP?",
-            course_name="MCP",
-            lesson_number=None
+            query="What is MCP?", course_name="MCP", lesson_number=None
         )
         assert "Introduction to MCP Servers" in result
 
@@ -77,9 +74,7 @@ class TestCourseSearchTool:
         result = tool.execute(query="What is MCP?", lesson_number=1)
 
         mock_vector_store.search.assert_called_once_with(
-            query="What is MCP?",
-            course_name=None,
-            lesson_number=1
+            query="What is MCP?", course_name=None, lesson_number=1
         )
         assert "Lesson 1" in result
 
@@ -89,15 +84,11 @@ class TestCourseSearchTool:
         mock_vector_store.search.return_value = mock_search_results
 
         result = tool.execute(
-            query="What is MCP?",
-            course_name="MCP Servers",
-            lesson_number=1
+            query="What is MCP?", course_name="MCP Servers", lesson_number=1
         )
 
         mock_vector_store.search.assert_called_once_with(
-            query="What is MCP?",
-            course_name="MCP Servers",
-            lesson_number=1
+            query="What is MCP?", course_name="MCP Servers", lesson_number=1
         )
 
     def test_execute_empty_results(self, mock_vector_store, empty_search_results):
@@ -110,15 +101,15 @@ class TestCourseSearchTool:
         assert "No relevant content found" in result
         assert tool.last_sources == []
 
-    def test_execute_empty_results_with_filters(self, mock_vector_store, empty_search_results):
+    def test_execute_empty_results_with_filters(
+        self, mock_vector_store, empty_search_results
+    ):
         """Test empty results message includes filter information"""
         tool = CourseSearchTool(mock_vector_store)
         mock_vector_store.search.return_value = empty_search_results
 
         result = tool.execute(
-            query="test",
-            course_name="Advanced Course",
-            lesson_number=5
+            query="test", course_name="Advanced Course", lesson_number=5
         )
 
         assert "No relevant content found" in result
@@ -135,7 +126,9 @@ class TestCourseSearchTool:
         assert "Search error: Connection timeout" in result
         assert isinstance(result, str)
 
-    def test_format_results_with_lesson_links(self, mock_vector_store, mock_search_results):
+    def test_format_results_with_lesson_links(
+        self, mock_vector_store, mock_search_results
+    ):
         """Test that lesson links are retrieved and stored in sources"""
         tool = CourseSearchTool(mock_vector_store)
         mock_vector_store.search.return_value = mock_search_results
@@ -160,7 +153,7 @@ class TestCourseSearchTool:
             documents=["Content without lesson number"],
             metadata=[{"course_title": "Test Course"}],
             distances=[0.1],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = results
 
@@ -172,7 +165,9 @@ class TestCourseSearchTool:
         assert tool.last_sources[0]["text"] == "Test Course"
         assert tool.last_sources[0]["link"] is None
 
-    def test_source_tracking_resets_between_searches(self, mock_vector_store, mock_search_results):
+    def test_source_tracking_resets_between_searches(
+        self, mock_vector_store, mock_search_results
+    ):
         """Test that last_sources is properly updated on each search"""
         tool = CourseSearchTool(mock_vector_store)
         mock_vector_store.search.return_value = mock_search_results
@@ -187,7 +182,7 @@ class TestCourseSearchTool:
             documents=["Single result"],
             metadata=[{"course_title": "Course A", "lesson_number": 1}],
             distances=[0.1],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = single_result
 
@@ -199,6 +194,7 @@ class TestCourseSearchTool:
 # ============================================================================
 # ToolManager Tests
 # ============================================================================
+
 
 class TestToolManager:
     """Test suite for ToolManager"""
@@ -243,9 +239,7 @@ class TestToolManager:
         mock_vector_store.search.return_value = mock_search_results
 
         result = manager.execute_tool(
-            "search_course_content",
-            query="test",
-            course_name="MCP"
+            "search_course_content", query="test", course_name="MCP"
         )
 
         assert isinstance(result, str)

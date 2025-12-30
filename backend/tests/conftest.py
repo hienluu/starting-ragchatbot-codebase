@@ -1,19 +1,20 @@
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from typing import List, Dict, Any
-import sys
 import os
+import sys
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import Course, Lesson, CourseChunk
+from models import Course, CourseChunk, Lesson
 from vector_store import SearchResults
-
 
 # ============================================================================
 # Vector Store Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_search_results():
@@ -27,28 +28,23 @@ def mock_search_results():
             {
                 "course_title": "Introduction to MCP Servers",
                 "lesson_number": 1,
-                "chunk_index": 0
+                "chunk_index": 0,
             },
             {
                 "course_title": "Introduction to MCP Servers",
                 "lesson_number": 2,
-                "chunk_index": 5
-            }
+                "chunk_index": 5,
+            },
         ],
         distances=[0.15, 0.22],
-        error=None
+        error=None,
     )
 
 
 @pytest.fixture
 def empty_search_results():
     """Create empty SearchResults"""
-    return SearchResults(
-        documents=[],
-        metadata=[],
-        distances=[],
-        error=None
-    )
+    return SearchResults(documents=[], metadata=[], distances=[], error=None)
 
 
 @pytest.fixture
@@ -58,7 +54,7 @@ def error_search_results():
         documents=[],
         metadata=[],
         distances=[],
-        error="Search error: Connection timeout"
+        error="Search error: Connection timeout",
     )
 
 
@@ -76,6 +72,7 @@ def mock_vector_store():
 # Course Data Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_course():
     """Create a sample Course object"""
@@ -84,10 +81,22 @@ def sample_course():
         course_link="https://example.com/mcp-course",
         instructor="Dr. Jane Smith",
         lessons=[
-            Lesson(lesson_number=1, title="What is MCP?", lesson_link="https://example.com/lesson1"),
-            Lesson(lesson_number=2, title="Building MCP Servers", lesson_link="https://example.com/lesson2"),
-            Lesson(lesson_number=3, title="Advanced Patterns", lesson_link="https://example.com/lesson3"),
-        ]
+            Lesson(
+                lesson_number=1,
+                title="What is MCP?",
+                lesson_link="https://example.com/lesson1",
+            ),
+            Lesson(
+                lesson_number=2,
+                title="Building MCP Servers",
+                lesson_link="https://example.com/lesson2",
+            ),
+            Lesson(
+                lesson_number=3,
+                title="Advanced Patterns",
+                lesson_link="https://example.com/lesson3",
+            ),
+        ],
     )
 
 
@@ -99,13 +108,13 @@ def sample_course_chunks():
             content="MCP (Model Context Protocol) is a protocol for connecting AI models.",
             course_title="Introduction to MCP Servers",
             lesson_number=1,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="MCP servers provide tools and resources to Claude.",
             course_title="Introduction to MCP Servers",
             lesson_number=1,
-            chunk_index=1
+            chunk_index=1,
         ),
     ]
 
@@ -113,6 +122,7 @@ def sample_course_chunks():
 # ============================================================================
 # Anthropic API Mock Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_anthropic_client():
@@ -148,10 +158,7 @@ def anthropic_tool_use_response():
     tool_block.type = "tool_use"
     tool_block.id = "toolu_01A2B3C4D5E6F7G8H9I0J1K2"
     tool_block.name = "search_course_content"
-    tool_block.input = {
-        "query": "What is MCP?",
-        "course_name": "MCP"
-    }
+    tool_block.input = {"query": "What is MCP?", "course_name": "MCP"}
 
     response.content = [tool_block]
     return response
@@ -205,29 +212,39 @@ def anthropic_final_response_after_two_rounds():
 # Tool Manager Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def mock_tool_manager():
     """Create a mock ToolManager"""
     mock_manager = Mock()
-    mock_manager.get_tool_definitions = Mock(return_value=[
-        {
-            "name": "search_course_content",
-            "description": "Search course materials",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "course_name": {"type": "string"},
-                    "lesson_number": {"type": "integer"}
+    mock_manager.get_tool_definitions = Mock(
+        return_value=[
+            {
+                "name": "search_course_content",
+                "description": "Search course materials",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "course_name": {"type": "string"},
+                        "lesson_number": {"type": "integer"},
+                    },
+                    "required": ["query"],
                 },
-                "required": ["query"]
             }
-        }
-    ])
-    mock_manager.execute_tool = Mock(return_value="[Introduction to MCP Servers - Lesson 1]\nMCP is a protocol for AI.")
-    mock_manager.get_last_sources = Mock(return_value=[
-        {"text": "Introduction to MCP Servers - Lesson 1", "link": "https://example.com/lesson1"}
-    ])
+        ]
+    )
+    mock_manager.execute_tool = Mock(
+        return_value="[Introduction to MCP Servers - Lesson 1]\nMCP is a protocol for AI."
+    )
+    mock_manager.get_last_sources = Mock(
+        return_value=[
+            {
+                "text": "Introduction to MCP Servers - Lesson 1",
+                "link": "https://example.com/lesson1",
+            }
+        ]
+    )
     mock_manager.reset_sources = Mock()
     return mock_manager
 
@@ -235,6 +252,7 @@ def mock_tool_manager():
 # ============================================================================
 # Session Manager Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_session_manager():
@@ -249,10 +267,12 @@ def mock_session_manager():
 # Configuration Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def test_config():
     """Create test configuration"""
     from config import Config
+
     config = Config()
     config.ANTHROPIC_API_KEY = "test_api_key"
     config.MAX_RESULTS = 5

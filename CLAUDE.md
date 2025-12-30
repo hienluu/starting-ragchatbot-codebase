@@ -51,6 +51,35 @@ uv run <any-command>
 # API docs: http://localhost:8000/docs
 ```
 
+### Code Quality Tools
+
+This project uses automated code quality tools to maintain consistency:
+
+**Tools:**
+- **Black**: Automatic code formatting (line length: 88)
+- **isort**: Import sorting (compatible with Black)
+- **flake8**: Linting and style checking
+
+**Scripts:**
+
+```bash
+# Auto-format all Python code (runs black and isort)
+./format.sh
+
+# Check code quality without making changes
+./quality-check.sh
+
+# Run individual tools
+uv run black backend/ main.py
+uv run isort backend/ main.py
+uv run flake8 backend/ main.py
+```
+
+**Configuration:**
+- Tool settings are in `pyproject.toml` ([tool.black], [tool.isort])
+- Flake8 config in `.flake8` file
+- Run `./format.sh` before committing to ensure code consistency
+
 ### Environment Setup
 
 Required environment variable in `.env` file:
