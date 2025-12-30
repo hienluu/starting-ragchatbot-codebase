@@ -258,3 +258,120 @@ def test_config():
     config.MAX_RESULTS = 5
     config.MAX_HISTORY = 2
     return config
+
+
+# ============================================================================
+# FastAPI Testing Fixtures
+# ============================================================================
+
+@pytest.fixture
+def mock_rag_system():
+    """Create a mock RAG system for API testing"""
+    mock_rag = Mock()
+    mock_rag.query = Mock(return_value=(
+        "This is a test response about MCP.",
+        [{"text": "Test Course - Lesson 1", "link": "https://example.com/lesson1"}]
+    ))
+    mock_rag.get_course_analytics = Mock(return_value={
+        "total_courses": 2,
+        "course_titles": ["Introduction to MCP", "Advanced MCP"]
+    })
+    mock_rag.session_manager = Mock()
+    mock_rag.session_manager.create_session = Mock(return_value="test_session_123")
+    mock_rag.session_manager.delete_session = Mock(return_value=True)
+    return mock_rag
+
+
+@pytest.fixture
+def test_app(mock_rag_system):
+    """
+    Create a test FastAPI app without static file mounting.
+    This avoids issues with missing frontend directory during tests.
+    """
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    from typing import List, Optional
+
+    # Create test app
+    app = FastAPI(title="Course Materials RAG System - Test", root_path="")
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Pydantic models
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class SourceItem(BaseModel):
+        text: str
+        link: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[SourceItem]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    # API endpoints (same as production but using mock_rag_system)
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = mock_rag_system.session_manager.create_session()
+
+            answer, sources = mock_rag_system.query(request.query, session_id)
+
+            return QueryResponse(
+                answer=answer,
+                sources=sources,
+                session_id=session_id
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = mock_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/session/{session_id}")
+    async def delete_session(session_id: str):
+        try:
+            deleted = mock_rag_system.session_manager.delete_session(session_id)
+            return {
+                "success": deleted,
+                "message": "Session deleted" if deleted else "Session not found"
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/health")
+    async def health_check():
+        return {"status": "ok"}
+
+    return app
+
+
+@pytest.fixture
+def test_client(test_app):
+    """Create a test client for the FastAPI app"""
+    from fastapi.testclient import TestClient
+    return TestClient(test_app)
