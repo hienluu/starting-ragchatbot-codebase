@@ -38,6 +38,12 @@ function setupEventListeners() {
             sendMessage();
         });
     });
+
+    // New chat button
+    const newChatButton = document.getElementById('newChatButton');
+    if (newChatButton) {
+        newChatButton.addEventListener('click', handleNewChat);
+    }
 }
 
 
@@ -122,10 +128,31 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        // Format sources with clickable links as list items
+        const sourcesListItems = sources.map(source => {
+            if (source.link) {
+                // Source has a link - make it clickable with icon
+                return `<li class="source-item">
+                    <svg class="source-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 0L9.5 5.5L15 7L9.5 8.5L8 14L6.5 8.5L1 7L6.5 5.5L8 0Z" fill="currentColor" opacity="0.7"/>
+                    </svg>
+                    <a href="${escapeHtml(source.link)}" target="_blank" rel="noopener noreferrer" class="source-link">${escapeHtml(source.text)}</a>
+                </li>`;
+            } else {
+                // Source has no link - display as plain text
+                return `<li class="source-item">
+                    <svg class="source-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="8" cy="8" r="2" fill="currentColor" opacity="0.5"/>
+                    </svg>
+                    <span class="source-text">${escapeHtml(source.text)}</span>
+                </li>`;
+            }
+        }).join('');
+
         html += `
             <details class="sources-collapsible">
-                <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <summary class="sources-header">Sources (${sources.length})</summary>
+                <ul class="sources-content">${sourcesListItems}</ul>
             </details>
         `;
     }
@@ -150,6 +177,30 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+/**
+ * Handle new chat button click
+ * Clears current conversation and starts fresh session
+ */
+async function handleNewChat() {
+    // Delete old session from backend
+    if (currentSessionId) {
+        try {
+            await fetch(`${API_URL}/session/${currentSessionId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            console.warn('Failed to delete session:', error);
+            // Non-critical - continue anyway
+        }
+    }
+
+    // Create new session (clears UI and resets session ID)
+    await createNewSession();
+
+    // Focus chat input for immediate typing
+    chatInput.focus();
 }
 
 // Load course statistics

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Protocol
+from typing import Dict, Any, Optional, Protocol, List
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
 
@@ -22,7 +22,7 @@ class CourseSearchTool(Tool):
     
     def __init__(self, vector_store: VectorStore):
         self.store = vector_store
-        self.last_sources = []  # Track sources from last search
+        self.last_sources: List[Dict[str, Optional[str]]] = []  # Track sources from last search
     
     def get_tool_definition(self) -> Dict[str, Any]:
         """Return Anthropic tool definition for this tool"""
@@ -89,29 +89,127 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
-            source = course_title
+
+            # Build source text for the UI
+            source_text = course_title
             if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
+                source_text += f" - Lesson {lesson_num}"
+
+            # Try to get lesson link from vector store
+            lesson_link = None
+            if lesson_num is not None:
+                lesson_link = self.store.get_lesson_link(course_title, lesson_num)
+
+            # Create source object with text and optional link
+            source = {
+                "text": source_text,
+                "link": lesson_link  # Will be None if not found
+            }
             sources.append(source)
-            
+
             formatted.append(f"{header}\n{doc}")
-        
+
         # Store sources for retrieval
         self.last_sources = sources
-        
+
         return "\n\n".join(formatted)
+
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving course outlines and structure information"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic tool definition for course outline retrieval"""
+        return {
+            "name": "get_course_outline",
+            "description": "Retrieve complete course structure including title, instructor, link, and all lessons. Use this when users ask about course outline, structure, or want to see what lessons are available in a specific course. Do NOT use for searching lesson content - use search_course_content for that.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_name": {
+                        "type": "string",
+                        "description": "Course title or partial name (e.g., 'MCP', 'Computer Use', 'Introduction')"
+                    }
+                },
+                "required": ["course_name"]
+            }
+        }
+
+    def execute(self, course_name: str) -> str:
+        """
+        Execute the course outline tool.
+
+        Args:
+            course_name: Course name/title to get outline for
+
+        Returns:
+            Formatted course outline as string
+        """
+        # Use semantic matching to resolve course name
+        resolved_title = self.store._resolve_course_name(course_name)
+
+        if not resolved_title:
+            # Get available courses for error message
+            all_metadata = self.store.get_all_courses_metadata()
+            available = ", ".join([c.get('title', 'Unknown') for c in all_metadata]) if all_metadata else "none"
+            return f"No course found matching '{course_name}'. Available courses: {available}"
+
+        # Get metadata for the resolved course
+        all_metadata = self.store.get_all_courses_metadata()
+        course_data = next((c for c in all_metadata if c['title'] == resolved_title), None)
+
+        if not course_data:
+            return f"Course '{resolved_title}' found but metadata unavailable."
+
+        # Format and return the outline
+        return self._format_course_outline(course_data)
+
+    def _format_course_outline(self, course_data: Dict[str, Any]) -> str:
+        """Format a single course outline with all details"""
+        title = course_data.get('title', 'Unknown')
+        course_link = course_data.get('course_link')
+        instructor = course_data.get('instructor')
+        lessons = course_data.get('lessons', [])
+
+        # Build header with course info
+        output = [f"Course: {title}"]
+
+        if instructor:
+            output.append(f"Instructor: {instructor}")
+
+        if course_link:
+            output.append(f"Course Link: {course_link}")
+
+        # Add lesson count and list
+        output.append(f"\nLessons ({len(lessons)} total):")
+
+        # List all lessons with numbers, titles, and links
+        for lesson in lessons:
+            lesson_num = lesson.get('lesson_number')
+            lesson_title = lesson.get('lesson_title', 'Untitled')
+            lesson_link = lesson.get('lesson_link')
+
+            lesson_line = f"  Lesson {lesson_num}: {lesson_title}"
+            if lesson_link:
+                lesson_line += f" ({lesson_link})"
+
+            output.append(lesson_line)
+
+        return "\n".join(output)
+
 
 class ToolManager:
     """Manages available tools for the AI"""
@@ -139,7 +237,7 @@ class ToolManager:
         
         return self.tools[tool_name].execute(**kwargs)
     
-    def get_last_sources(self) -> list:
+    def get_last_sources(self) -> List[Dict[str, Optional[str]]]:
         """Get sources from the last search operation"""
         # Check all tools for last_sources attribute
         for tool in self.tools.values():
