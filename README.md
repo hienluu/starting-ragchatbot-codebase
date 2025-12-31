@@ -54,3 +54,6 @@ The application will be available at:
 - Web Interface: `http://localhost:8000`
 - API Documentation: `http://localhost:8000/docs`
 
+### Link to original github repo
+* [Course Repository Links](https://github.com/https-deeplearning-ai/sc-claude-code-files/blob/main/links_to_course_repos.md)
+
