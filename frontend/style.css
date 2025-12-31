@@ -5,7 +5,7 @@
     padding: 0;
 }
 
-/* CSS Variables */
+/* CSS Variables - Dark Theme (Default) */
 :root {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
@@ -22,6 +22,31 @@
     --focus-ring: rgba(37, 99, 235, 0.2);
     --welcome-bg: #1e3a5f;
     --welcome-border: #2563eb;
+    --code-bg: rgba(0, 0, 0, 0.2);
+    --source-bg: rgba(37, 99, 235, 0.05);
+    --source-bg-hover: rgba(37, 99, 235, 0.1);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-hover: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --user-message: #2563eb;
+    --assistant-message: #f1f5f9;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --radius: 12px;
+    --focus-ring: rgba(37, 99, 235, 0.2);
+    --welcome-bg: #eff6ff;
+    --welcome-border: #2563eb;
+    --code-bg: #f1f5f9;
+    --source-bg: rgba(37, 99, 235, 0.08);
+    --source-bg-hover: rgba(37, 99, 235, 0.15);
 }
 
 /* Base Styles */
@@ -34,6 +59,7 @@ body {
     overflow: hidden;
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Container - Full Screen */
@@ -300,14 +326,14 @@ header h1 {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin: 0.25rem 0;
-    background: rgba(37, 99, 235, 0.05);
+    background: var(--source-bg);
     border-left: 2px solid var(--primary-color);
     border-radius: 4px;
     transition: all 0.2s ease;
 }
 
 .source-item:hover {
-    background: rgba(37, 99, 235, 0.1);
+    background: var(--source-bg-hover);
     border-left-color: var(--primary-hover);
     transform: translateX(2px);
 }
@@ -375,7 +401,7 @@ header h1 {
 }
 
 .message-content code {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.125rem 0.25rem;
     border-radius: 3px;
     font-family: 'Fira Code', 'Consolas', monospace;
@@ -383,7 +409,7 @@ header h1 {
 }
 
 .message-content pre {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.75rem;
     border-radius: 4px;
     overflow-x: auto;
@@ -821,5 +847,83 @@ details[open] .suggested-header::before {
 @media (max-width: 1024px) {
     .sidebar {
         width: 280px;
+    }
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow);
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Icon visibility based on theme */
+.theme-toggle .sun-icon {
+    display: none;
+}
+
+.theme-toggle .moon-icon {
+    display: block;
+}
+
+[data-theme="light"] .theme-toggle .sun-icon {
+    display: block;
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+    display: none;
+}
+
+/* Smooth transitions for theme-able elements */
+.container,
+.main-content,
+.sidebar,
+.chat-main,
+.chat-container,
+.chat-messages,
+.message-content,
+.chat-input-container,
+#chatInput,
+.source-item,
+.stat-item,
+.suggested-item,
+.new-chat-button {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .theme-toggle {
+        top: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
     }
 }
